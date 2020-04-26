@@ -8,11 +8,14 @@
 #
 library(tidyverse)
 library(shiny)
+library(gganimate)
+library(tidymodels)
 library(shinythemes)
 
 olympics<-readRDS("data/olympics.rds")
 college<- readRDS("data/college.rds")
 props<-readRDS("data/prop_winners.rds")
+tidy_props<- readRDS("tidy_props.rds")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
@@ -86,45 +89,43 @@ ui <- navbarPage(
                      mainPanel(plotOutput("chance_plot"))) 
              )),
     tabPanel("Importance of other ends",
+             h1("Importance of other ends"),
+             h3("Proportion of Winning Score: The shapes of games"),
              fluidPage(
-                 titlePanel("Model Title"),
+                 titlePanel("Importance of other ends"),
                  sidebarLayout(
                      sidebarPanel(
                          selectInput(
-                             "plot_type",
-                             "Plot Type",
-                             c("Option A" = "a", "Option B" = "b")
+                             "gif_type",
+                             "Separated By",
+                             c("Men/Women" = "competition", 
+                               "Finals/Pool" = "team_group")
                          )),
-                     mainPanel(plotOutput("line2_plot")))
-             )),
+                     mainPanel(imageOutput("gif", height = "100%")))
+             ), 
+             h3("Logistic regression"),
+             fluidPage(
+                 titlePanel("Importance of other ends"),
+                 sidebarLayout(
+                     sidebarPanel(
+                         selectInput(
+                             "reg_type",
+                             "Regression of:",
+                             c("All Olympic" = "all", 
+                               "Olympic Women" = "olympic_women",
+                               "Olympic Men" = "olympic_men"#, 
+                              # "college" = "college",
+                               )
+                         )),
+                     mainPanel(plotOutput("log_plot"))))),
     tabPanel("Discussion",
              titlePanel("Discussion Title"),
              p("Tour of the modeling choices you made and 
               an explanation of why you made them")))
+    
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    output$line_plot <- renderPlot({
-        # Generate type based on input$plot_type from ui
-        
-        ifelse(
-            input$plot_type == "a",
-            
-            # If input$plot_type is "a", plot histogram of "waiting" column 
-            # from the faithful dataframe
-            
-            x   <- faithful[, 2],
-            
-            # If input$plot_type is "b", plot histogram of "eruptions" column
-            # from the faithful dataframe
-            
-            x   <- faithful[, 1]
-        )
-        
-        # Draw the histogram with the specified number of bins
-        
-        hist(x, col = 'darkgray', border = 'white')
-    })
-    
+
     # Plots on men/women vs finals/pool
     
     output$prelim_plot <- renderPlot({
@@ -147,7 +148,7 @@ server <- function(input, output) {
 
                 y <- x$competition,
                 
-                y   <- x$team_group)
+                y <- x$team_group)
         ifelse(
             input$plot_measure == "competition",
             
@@ -175,13 +176,114 @@ server <- function(input, output) {
         # Generate type based on input$plot_type from ui
         chance_everyone %>% filter(category == input$who) %>%
             ggplot(aes(score, value)) +
-            geom_col() + 
+            geom_col(fill = "turquoise") + 
             theme_classic() +
             labs(
                 title = "Score in the first end & chance of winning", 
                 x = "score in the first end", 
                 y = "chance of winning"
             )
+    })
+    
+    # fade plot
+    
+    output$fade_plot <- renderPlot({
+        # Generate type based on input$plot_type from ui
+        
+        fdata <- tidy_props
+          
+        fdata$value <- replace_na(fdata$value, 0)
+    
+        ifelse(
+            input$plot_type == "competition",
+            
+            y <- fdata$competition,
+            
+            y <- fdata$team_group)
+        
+        ifelse(
+            input$plot_type == "competition",
+            
+            legendtitle <- paste("Competition"),
+            
+            legendtitle <- paste("Team in Finals?"))
+        
+        
+        ggplot(fdata, aes(prop, value)) + 
+                geom_col(aes(fill = y)) +
+            facet_wrap(vars(year)) +
+            transition_states(y,
+                              transition_length = 2,
+                              state_length = 1) + enter_fade() + exit_fade() +
+            theme_classic() +
+            labs(
+                title = "Proportion of points scored by winners in Olympic Curling Games", 
+                y = "Proportion of points", 
+                x = "end", 
+                fill = legendtitle
+            ) + scale_x_discrete(labels = c(1:10))
+            
+    })
+    output$gif <- renderImage({
+        ifelse(input$gif_type == "competition", 
+        
+                (list(src = "plot_comp.gif",
+                 contentType = 'image/gif')),
+        
+                (list(src = "profinals.gif",
+                 contentType = 'image/gif')))
+        
+    }, deleteFile = FALSE)
+    # logistic regression
+    
+    output$log_plot <- renderPlot({
+        # Generate type based on input$plot_type from ui
+        clean_all_years_olympics <- olympics %>% 
+            mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
+            select(id, year, competition, team_group, country, win, 
+                   starts_with("x"), -x, -x_2, -x10, -x9)
+        
+        clean_all_college<- college %>% 
+            mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
+            select(id, year, competition, team_group, school, win, 
+                   starts_with("x"))
+        
+        logistic_mod <- logistic_reg() %>%
+            set_engine("glm") 
+        
+        ifelse(
+            input$reg_type == "all", 
+            filt_clean_all_years_olympics<- clean_all_years_olympics, 
+            ifelse(
+                input$reg_type == "olympic_men", 
+                filt_clean_all_years_olympics <- clean_all_years_olympics %>% 
+                    filter(competition == "olympic_men"), 
+                filt_clean_all_years_olympics <- clean_all_years_olympics %>% 
+                    filter(competition == "olympic_women")
+            )
+        )
+        
+        logistic_fit <- fit(logistic_mod,
+                            
+                            factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
+                            
+                            data = filt_clean_all_years_olympics)
+        
+    
+        tibble_logistic_fit <- logistic_fit %>%
+            tidy(conf.int = TRUE) %>%
+            slice(2:8) %>% tibble()
+        
+        ggplot(tibble_logistic_fit, aes(term, estimate)) + 
+            geom_bar(stat = "identity") + 
+            geom_errorbar(aes(x = term, ymin = conf.low, ymax = conf.high)) + 
+            labs(
+                title = "Logistic regression coefficients for points per end on winning",
+                subtitle = "with 95% confidence interval", 
+                x = "end number", 
+                y = "Logistic Regression Coefficient"
+            )  + 
+            scale_x_discrete(labels = c(1:10))
     })
     # Curling Photo
     

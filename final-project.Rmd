@@ -364,12 +364,10 @@ tidy_props <- tidy_props %>%
 #ggplot(tidy_props, aes(prop, value)) + geom_col(position = "dodge") +
   #facet_wrap(vars(competition))
 ends<-c(1:10)
-ggplot(tidy_props, aes(prop, value)) + 
-  geom_col(aes(fill = competition)) +
+
+ggplot(tidy_props, aes(prop, mean(value))) + 
+  geom_bar(stat = "identity", aes(fill = team_group)) +
   facet_wrap(vars(year))+
-    transition_states(competition,
-                    transition_length = 2,
-                    state_length = 1) + enter_fade() + exit_fade() +
   theme_classic()+
   labs(
     title = "Proportion of points scored by winners in Olympic Curling Games", 
@@ -379,10 +377,14 @@ ggplot(tidy_props, aes(prop, value)) +
     fill = "Competition"
   ) + 
   scale_x_discrete(labels = ends) + 
-  scale_fill_discrete(labels = c("Men", "Women"))
+  scale_fill_discrete(labels = c("pool", "finals"))
 
 ```
 
+    transition_states(team_group,
+                    transition_length = 2,
+                    state_length = 1) + enter_fade() + exit_fade() +
+                    
 ```{r multivariate regression}
 clean_all_years_olympics <- all_years_olympics %>% 
   mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
@@ -467,5 +469,34 @@ ggplot(chance_everyone, aes(score, value, fill = category)) +
     y = "chance of winning"
   ) 
 
+```
+```{r}
+clean_all_college<- college_yale_spiel %>% 
+            mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
+            select(id, year, competition, team_group, school, win, 
+                   starts_with("x"))
+logistic_fit <- fit(logistic_mod,
+
+                    factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
+
+                    data = clean_all_college)
+
+logistic_fit
+
+tibble_logistic_fit <- logistic_fit %>%
+  tidy(conf.int = TRUE) #%>%
+  #slice(2:8)
+ # tibble()
+
+ggplot(tibble_logistic_fit, aes(term, estimate)) + 
+  geom_bar(stat = "identity") + 
+  geom_errorbar(aes(x = term, ymin = conf.low, ymax = conf.high)) + 
+  labs(
+    title = "Logistic regression coefficients for points per end on winning",
+    subtitle = "with 95% confidence interval", 
+    x = "end number", 
+    y = "Logistic Regression Coefficient"
+  )  + 
+  scale_x_discrete(labels = ends)
 ```
 
