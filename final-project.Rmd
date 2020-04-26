@@ -365,19 +365,25 @@ tidy_props <- tidy_props %>%
   #facet_wrap(vars(competition))
 ends<-c(1:10)
 
-ggplot(tidy_props, aes(prop, mean(value))) + 
-  geom_bar(stat = "identity", aes(fill = team_group)) +
-  facet_wrap(vars(year))+
+tidy_props %>% 
+  group_by(year, team_group, prop) %>% 
+  summarize(points_prop = mean(value)) %>% 
+  ggplot(aes(prop, points_prop)) +
+  geom_bar(stat = "identity", aes(fill = team_group))+
   theme_classic()+
+  facet_wrap(vars(year))+
   labs(
     title = "Proportion of points scored by winners in Olympic Curling Games", 
-    subtitle = "the first end for men  in 2018 showed remarkable importance", 
+    subtitle = "Proportions of points in finals more uneven--also fewer data points", 
     y = "Proportion of points", 
     x = "end", 
     fill = "Competition"
   ) + 
-  scale_x_discrete(labels = ends) + 
-  scale_fill_discrete(labels = c("pool", "finals"))
+  scale_x_discrete(labels = c(1:10)) +
+  scale_fill_discrete(labels = c("Finals", "Pool"))+ 
+  transition_states(team_group,
+                    transition_length = 2,
+                     state_length = 1) + enter_fade() + exit_fade()
 
 ```
 
@@ -475,20 +481,20 @@ clean_all_college<- college_yale_spiel %>%
             mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
             select(id, year, competition, team_group, school, win, 
                    starts_with("x"))
-logistic_fit <- fit(logistic_mod,
+college_logistic_fit <- fit(logistic_mod,
 
-                    factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
+                    factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7,
 
                     data = clean_all_college)
 
 logistic_fit
 
-tibble_logistic_fit <- logistic_fit %>%
-  tidy(conf.int = TRUE) #%>%
-  #slice(2:8)
- # tibble()
+college_tibble_logistic_fit <- logistic_fit %>%
+  tidy(conf.int = TRUE) %>%
+  slice(2:8)
+  tibble()
 
-ggplot(tibble_logistic_fit, aes(term, estimate)) + 
+ggplot(college_tibble_logistic_fit, aes(term, estimate)) + 
   geom_bar(stat = "identity") + 
   geom_errorbar(aes(x = term, ymin = conf.low, ymax = conf.high)) + 
   labs(

@@ -8,6 +8,8 @@
 #
 library(tidyverse)
 library(shiny)
+library(broom)
+library(tidyr)
 library(gganimate)
 library(tidymodels)
 library(shinythemes)
@@ -21,6 +23,30 @@ tidy_props<- readRDS("tidy_props.rds")
 ui <- navbarPage(
     theme = shinytheme("cerulean"),
     "Curling",
+    tabPanel("Overview",
+             titlePanel("Curling: 'Chess on Ice'"),
+             h3("Introduction to Curling"), 
+             p("In My project, I wanted to explore the differential importance
+               of different ends in a game of curling. Curling, like baseball, 
+               is played in different rounds called 'ends', and strategy can 
+               vary widely between different ends in the same game. A team that's
+               playing from behind, for example, will be forced to take riskier
+               shots for more points than a team who is in the lead. The leading 
+               team might choose to forgo winning points in later ends if they 
+               scored by a wide margin earlier."), 
+             h3("How is College Curling different?"), 
+             p("As a college curler, I know intimately well the differences in 
+               gameplay between myself and my team, and what we see on television. 
+               The sheer amount of velocity, or 'weight', that adult men can put
+               behind a 44-pound curling stone, is just not accessible by 18-21 
+               year-old college students. Women, though with notable exceptions 
+               like Racel Homan, who can throw with a ton of weight, are similar 
+               to college students in that their stones are typically 'lighter'."), 
+             p("Therefore, I hypothesize that though still different, college 
+               curling data will more closely resemble women curlers than men in
+               the olympics."), 
+             h3("Overview of Methods"), 
+             p("methods")),
     tabPanel("About", 
              titlePanel("About"),
              column(6,
@@ -113,12 +139,12 @@ ui <- navbarPage(
                              "Regression of:",
                              c("All Olympic" = "all", 
                                "Olympic Women" = "olympic_women",
-                               "Olympic Men" = "olympic_men"#, 
-                              # "college" = "college",
+                               "Olympic Men" = "olympic_men", 
+                               "College" = "college"
                                )
                          )),
                      mainPanel(plotOutput("log_plot"))))),
-    tabPanel("Discussion",
+    tabPanel("Discussion2",
              titlePanel("Discussion Title"),
              p("Tour of the modeling choices you made and 
               an explanation of why you made them")))
@@ -135,12 +161,12 @@ server <- function(input, output) {
             input$plot_measure == "competition",
             
             
-            x   <- all_years_olympics %>% 
+            x   <- olympics %>% 
                 group_by(year,competition) %>% 
                 summarize(prop_double_win = mean(first_end_first_game, na.rm = T)),
             
            
-            x   <- all_years_olympics %>% 
+            x   <- olympics %>% 
                 group_by(year, team_group) %>% 
                 summarize(prop_double_win = mean(first_end_first_game, na.rm = T)))
         ifelse(
@@ -174,7 +200,7 @@ server <- function(input, output) {
     
     output$chance_plot <- renderPlot({
         # Generate type based on input$plot_type from ui
-        chance_everyone %>% filter(category == input$who) %>%
+        props %>% filter(category == input$who) %>%
             ggplot(aes(score, value)) +
             geom_col(fill = "turquoise") + 
             theme_classic() +
@@ -187,63 +213,64 @@ server <- function(input, output) {
     
     # fade plot
     
-    output$fade_plot <- renderPlot({
-        # Generate type based on input$plot_type from ui
-        
-        fdata <- tidy_props
-          
-        fdata$value <- replace_na(fdata$value, 0)
-    
-        ifelse(
-            input$plot_type == "competition",
-            
-            y <- fdata$competition,
-            
-            y <- fdata$team_group)
-        
-        ifelse(
-            input$plot_type == "competition",
-            
-            legendtitle <- paste("Competition"),
-            
-            legendtitle <- paste("Team in Finals?"))
-        
-        
-        ggplot(fdata, aes(prop, value)) + 
-                geom_col(aes(fill = y)) +
-            facet_wrap(vars(year)) +
-            transition_states(y,
-                              transition_length = 2,
-                              state_length = 1) + enter_fade() + exit_fade() +
-            theme_classic() +
-            labs(
-                title = "Proportion of points scored by winners in Olympic Curling Games", 
-                y = "Proportion of points", 
-                x = "end", 
-                fill = legendtitle
-            ) + scale_x_discrete(labels = c(1:10))
-            
-    })
+    # output$fade_plot <- renderPlot({
+    #     # Generate type based on input$plot_type from ui
+    # 
+    #     fdata <- tidy_props
+    # 
+    #     fdata$value <- replace_na(fdata$value, 0)
+    # 
+    #     ifelse(
+    #         input$plot_type == "competition",
+    # 
+    #         y <- fdata$competition,
+    # 
+    #         y <- fdata$team_group)
+    # 
+    #     ifelse(
+    #         input$plot_type == "competition",
+    # 
+    #         legendtitle <- paste("Competition"),
+    # 
+    #         legendtitle <- paste("Team in Finals?"))
+    # 
+    # 
+    #     ggplot(fdata, aes(prop, value)) +
+    #             geom_col(aes(fill = y)) +
+    #         facet_wrap(vars(year)) +
+    #         transition_states(y,
+    #                           transition_length = 2,
+    #                           state_length = 1) + enter_fade() + exit_fade() +
+    #         theme_classic() +
+    #         labs(
+    #             title = "Proportion of points scored by winners in Olympic Curling Games",
+    #             y = "Proportion of points",
+    #             x = "end",
+    #             fill = legendtitle
+    #         ) + scale_x_discrete(labels = c(1:10))
+    #         
+    # })
     output$gif <- renderImage({
         ifelse(input$gif_type == "competition", 
         
-                (list(src = "plot_comp.gif",
+                gif <- (list(src = "plot_comp.gif",
                  contentType = 'image/gif')),
         
-                (list(src = "profinals.gif",
+                gif<- (list(src = "poolfinals.gif",
                  contentType = 'image/gif')))
+        gif
         
     }, deleteFile = FALSE)
     # logistic regression
     
     output$log_plot <- renderPlot({
         # Generate type based on input$plot_type from ui
-        clean_all_years_olympics <- olympics %>% 
+        clean_olympics <- olympics %>% 
             mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
             select(id, year, competition, team_group, country, win, 
                    starts_with("x"), -x, -x_2, -x10, -x9)
         
-        clean_all_college<- college %>% 
+        clean_college<- college %>% 
             mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
             select(id, year, competition, team_group, school, win, 
                    starts_with("x"))
@@ -253,30 +280,55 @@ server <- function(input, output) {
         
         ifelse(
             input$reg_type == "all", 
-            filt_clean_all_years_olympics<- clean_all_years_olympics, 
+            filt_olympics<- clean_olympics, 
             ifelse(
                 input$reg_type == "olympic_men", 
-                filt_clean_all_years_olympics <- clean_all_years_olympics %>% 
-                    filter(competition == "olympic_men"), 
-                filt_clean_all_years_olympics <- clean_all_years_olympics %>% 
-                    filter(competition == "olympic_women")
+                filt_olympics <- clean_olympics %>% 
+                    filter(competition == "olympic_men"),
+                ifelse(input$regtype == "olympic_women", 
+                       filt_olympics <- clean_olympics %>% 
+                           filter(competition == "olympic_women"), 
+                       filt_college <- clean_college)
+                
             )
         )
+        n <- 7
         
-        logistic_fit <- fit(logistic_mod,
-                            
-                            factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
-                            
-                            data = filt_clean_all_years_olympics)
+        ifelse(input$regtype == "college", 
+               n <-7, 
+               n <- 8)
+        
+        ifelse(input$regtype == "college", 
+               
+               logistic_fit <- fit(logistic_mod,
+                                   factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7,
+                                   data = filt_college),
+               
+               logistic_fit <- fit(logistic_mod, 
+                                   factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +x8, 
+                                   data = filt_olympics)
+               )
+        
+        # logistic_fit <- fit(logistic_mod,
+        #                     
+        #                     factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
+        #                     
+        #                     data = filt_olympics)
+        # 
+        # logistic_fit <- fit(logistic_mod, 
+        #                             factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7, 
+        #                             data = filt_college)
         
     
         tibble_logistic_fit <- logistic_fit %>%
             tidy(conf.int = TRUE) %>%
-            slice(2:8) %>% tibble()
+            slice(2:8)
+        
         
         ggplot(tibble_logistic_fit, aes(term, estimate)) + 
-            geom_bar(stat = "identity") + 
-            geom_errorbar(aes(x = term, ymin = conf.low, ymax = conf.high)) + 
+            geom_bar(stat = "identity", fill = "turquoise") + 
+            geom_errorbar(aes(x = term, ymin = conf.low, ymax = conf.high), 
+                          color = "turquoise4") + 
             labs(
                 title = "Logistic regression coefficients for points per end on winning",
                 subtitle = "with 95% confidence interval", 
