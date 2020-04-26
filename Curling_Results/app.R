@@ -75,15 +75,15 @@ ui <- navbarPage(
                      mainPanel(plotOutput("prelim_plot")))
              ), 
              fluidPage(
-                 titlePanel("Model Title numero dos"),
+                 titlePanel("How Many Points in the First end to guarantee a win?"),
                  sidebarLayout(
                      sidebarPanel(
                          selectInput(
-                             "plot_type",
-                             "Plot Type",
-                             c("Option A" = "a", "Option B" = "b")
+                             "who",
+                             "Competition Category",
+                             c("men", "women", "college")
                          )),
-                     mainPanel(plotOutput("line_plot"))) 
+                     mainPanel(plotOutput("chance_plot"))) 
              )),
     tabPanel("Importance of other ends",
              fluidPage(
@@ -125,37 +125,35 @@ server <- function(input, output) {
         hist(x, col = 'darkgray', border = 'white')
     })
     
+    # Plots on men/women vs finals/pool
+    
     output$prelim_plot <- renderPlot({
         # Generate type based on input$plot_type from ui
         
         ifelse(
             input$plot_measure == "competition",
             
-            # If input$plot_type is "a", plot histogram of "waiting" column 
-            # from the faithful dataframe
             
             x   <- all_years_olympics %>% 
                 group_by(year,competition) %>% 
                 summarize(prop_double_win = mean(first_end_first_game, na.rm = T)),
             
-            # If input$plot_type is "b", plot histogram of "eruptions" column
-            # from the faithful dataframe
-            
+           
             x   <- all_years_olympics %>% 
                 group_by(year, team_group) %>% 
                 summarize(prop_double_win = mean(first_end_first_game, na.rm = T)))
         ifelse(
             input$plot_measure == "competition",
-                
-                # If input$plot_type is "a", plot histogram of "waiting" column 
-                # from the faithful dataframe
-                
+
                 y <- x$competition,
                 
-                # If input$plot_type is "b", plot histogram of "eruptions" column
-                # from the faithful dataframe
-                
                 y   <- x$team_group)
+        ifelse(
+            input$plot_measure == "competition",
+            
+            legendtitle <- paste("Competition"),
+            
+            legendtitle <- paste("Team in Finals?"))
 
         
         ggplot(x, aes(year, prop_double_win, fill = y, label = round(prop_double_win, digits = 3))) + 
@@ -163,12 +161,27 @@ server <- function(input, output) {
             theme_classic()+ 
             labs(
                 title = "Proportion of Curling Games 'decided' in the First End", 
-                subtitle = "teams who made it to the final round are less affected 2018\nbut more affected in all other years", 
-                x = "type of game", 
+                subtitle = "Women less affect than Men, and finals potentially more affected", 
+                x = "Year", 
                 y = "Proportion of total games won \nthat were won in the first end", 
-                fill = 
+                fill = legendtitle
             )+ geom_text(position = position_dodge(width=1))
         
+    })
+    
+    # Points in the first end plot
+    
+    output$chance_plot <- renderPlot({
+        # Generate type based on input$plot_type from ui
+        chance_everyone %>% filter(category == input$who) %>%
+            ggplot(aes(score, value)) +
+            geom_col() + 
+            theme_classic() +
+            labs(
+                title = "Score in the first end & chance of winning", 
+                x = "score in the first end", 
+                y = "chance of winning"
+            )
     })
     # Curling Photo
     
