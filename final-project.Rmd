@@ -9,6 +9,7 @@ knitr::opts_chunk$set(echo = F)
 library(janitor)
 library(rvest)
 library(tidyr)
+library(infer)
 library(tidymodels)
 library(tidyverse)
 library(reprex)
@@ -311,6 +312,23 @@ ggplot(proportion_olympics_quick, aes(year, prop_double_win, fill = team_group, 
 
 ```
 
+```{r}
+proportion_olympics_quick <- all_years_olympics %>% 
+  group_by(year,competition) %>% 
+  summarize(prop_double_win = mean(first_end_first_game, na.rm = T))
+
+ggplot(proportion_olympics_quick, aes(year, prop_double_win, fill = competition, label = round(prop_double_win, digits = 3))) + 
+  geom_bar(stat = "identity", position = "dodge")+ 
+  theme_classic()+ 
+    labs(
+    title = "Proportion of Curling Games 'decided' in the First End", 
+    subtitle = "teams who made it to the final round are less affected 2018\nbut more affected in all other years", 
+    x = "type of game", 
+    y = "Proportion of total games won \nthat were won in the first end", 
+    fill = "Team in finals?"
+  )+ geom_text(position = position_dodge(width=1))
+```
+
 ```{r new analysis}
 all_years_olympics %>% 
   filter(ind_game_winner == T) %>%  
@@ -426,6 +444,8 @@ olympic_men_chance<-all_years_olympics %>%
   filter(competition == "olympic_men") %>% 
   group_by(x1) %>% 
   summarize(chance = mean(ind_game_winner)) %>% pull(chance)
+```
+```{r chance_everyone}
 chance_everyone <- tibble(
   score = 0:5, 
   pr_men = c(olympic_men_chance, 1), 
@@ -437,7 +457,15 @@ chance_everyone <- tibble(
     names_to = "category", 
     names_prefix = "pr_")
 ``` 
-```{r bootstrapped means}
+```{r plot}
+ggplot(chance_everyone, aes(score, value, fill = category)) +
+  geom_col() + 
+  theme_classic() +
+  labs(
+    title = "score in the first end & chance of winning", 
+    x = "score in the first end", 
+    y = "chance of winning"
+  ) 
 
 ```
 
