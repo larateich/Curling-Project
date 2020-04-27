@@ -19,6 +19,9 @@ college<- readRDS("data/college.rds")
 props<-readRDS("data/prop_winners.rds")
 tidy_props<- readRDS("tidy_props.rds")
 
+logistic_mod <- logistic_reg() %>%
+    set_engine("glm") 
+
 # Define UI for application that draws a histogram
 ui <- navbarPage(
     theme = shinytheme("cerulean"),
@@ -46,7 +49,9 @@ ui <- navbarPage(
                curling data will more closely resemble women curlers than men in
                the olympics."), 
              h3("Overview of Methods"), 
-             p("methods")),
+             p("methods"), 
+             h3("Discussion of Results"), 
+             p("results")),
     tabPanel("About", 
              titlePanel("About"),
              column(6,
@@ -143,11 +148,7 @@ ui <- navbarPage(
                                "College" = "college"
                                )
                          )),
-                     mainPanel(plotOutput("log_plot"))))),
-    tabPanel("Discussion2",
-             titlePanel("Discussion Title"),
-             p("Tour of the modeling choices you made and 
-              an explanation of why you made them")))
+                     mainPanel(plotOutput("log_plot"))))))
     
 # Define server logic required to draw a histogram
 server <- function(input, output) {
@@ -275,9 +276,6 @@ server <- function(input, output) {
             select(id, year, competition, team_group, school, win, 
                    starts_with("x"))
         
-        logistic_mod <- logistic_reg() %>%
-            set_engine("glm") 
-        
         ifelse(
             input$reg_type == "all", 
             filt_olympics<- clean_olympics, 
@@ -285,45 +283,28 @@ server <- function(input, output) {
                 input$reg_type == "olympic_men", 
                 filt_olympics <- clean_olympics %>% 
                     filter(competition == "olympic_men"),
-                ifelse(input$regtype == "olympic_women", 
+                ifelse(input$reg_type == "olympic_women", 
                        filt_olympics <- clean_olympics %>% 
                            filter(competition == "olympic_women"), 
                        filt_college <- clean_college)
                 
             )
         )
-        n <- 7
         
-        ifelse(input$regtype == "college", 
-               n <-7, 
-               n <- 8)
-        
-        ifelse(input$regtype == "college", 
+        ifelse(input$reg_type == "college", 
                
-               logistic_fit <- fit(logistic_mod,
+               tibble_logistic_fit <- fit(logistic_mod,
                                    factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7,
-                                   data = filt_college),
+                                   data = filt_college) %>% 
+                                       tidy(conf.int = TRUE) %>%
+                                       slice(2:7),
                
-               logistic_fit <- fit(logistic_mod, 
-                                   factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 +x8, 
-                                   data = filt_olympics)
+               tibble_logistic_fit <- fit(logistic_mod, 
+                                   factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8, 
+                                   data = filt_olympics)%>% 
+                                       tidy(conf.int = TRUE) %>%
+                                       slice(2:8)
                )
-        
-        # logistic_fit <- fit(logistic_mod,
-        #                     
-        #                     factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8,
-        #                     
-        #                     data = filt_olympics)
-        # 
-        # logistic_fit <- fit(logistic_mod, 
-        #                             factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7, 
-        #                             data = filt_college)
-        
-    
-        tibble_logistic_fit <- logistic_fit %>%
-            tidy(conf.int = TRUE) %>%
-            slice(2:8)
-        
         
         ggplot(tibble_logistic_fit, aes(term, estimate)) + 
             geom_bar(stat = "identity", fill = "turquoise") + 
@@ -335,7 +316,8 @@ server <- function(input, output) {
                 x = "end number", 
                 y = "Logistic Regression Coefficient"
             )  + 
-            scale_x_discrete(labels = c(1:10))
+            scale_x_discrete(labels = c(1:10)) + 
+            theme_classic() + ylim (0, 2.6)
     })
     # Curling Photo
     
