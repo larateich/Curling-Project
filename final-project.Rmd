@@ -505,4 +505,23 @@ ggplot(college_tibble_logistic_fit, aes(term, estimate)) +
   )  + 
   scale_x_discrete(labels = ends)
 ```
+```{r}
+clean_all_college<- college_yale_spiel %>% 
+            mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
+            select(id, year, competition, team_group, school, win, 
+                   starts_with("x"))
+college_end1_logistic_fit <- fit(logistic_mod,
+
+                    factor(win) ~ x1,
+
+                    data = clean_all_college)
+
+
+college_tibble_logistic_fit <- college_end1_logistic_fit %>%
+  tidy(conf.int = TRUE)
+
+ggplot(clean_all_college, aes(x1, win)) + geom_point(position = "jitter") + theme_classic() + geom_smooth(method = "lm", se = F)
+
+
+```
 

@@ -49,9 +49,19 @@ ui <- navbarPage(
                curling data will more closely resemble women curlers than men in
                the olympics."), 
              h3("Overview of Methods"), 
-             p("methods"), 
-             h3("Discussion of Results"), 
-             p("results")),
+             p("First, I wanted to see what proportion of games were 'decided', 
+               so to speak, in the first end, by finding the proportion of games
+               whose winning team also won the first end. Then, I tried using 
+               multiple different regressions on the first end and whether the team one, 
+               resulting in a positive correlation."), 
+             p("I then became interested in the shapes of games more broadly. If 
+               not the first end, which end was the most important for scoring points? 
+               Which end had the biggest impact on the eventual result? 
+               My results in answering these questions are sadly not significant, because 
+               the differences in effect are too minute. However, given the volume of data
+               used, these differences may serve as a guide for future curling analytics work, 
+               and serve as an initial hypothesis.")
+            ),
     tabPanel("About", 
              titlePanel("About"),
              column(6,
@@ -97,7 +107,7 @@ ui <- navbarPage(
                     imageOutput("lara", height = "100%"))),
     tabPanel("First End  = Decisive Victory?",
              fluidPage(
-                 titlePanel("Model Title"),
+                 titlePanel("Preliminary Plot"),
                  sidebarLayout(
                      sidebarPanel(
                          selectInput(
@@ -105,7 +115,11 @@ ui <- navbarPage(
                              "Separated By",
                              c("Men/Women" = "competition", 
                                "Finals/Pool" = "team_group")
-                         )),
+                         ), 
+                         p("Here, we see the proportion of teams who won both
+                           the first end and the eventual game. In an attempt to 
+                           account for 'goodness' of a team, I separated teams who
+                           had made it to the finals from pool playing teams.")),
                      mainPanel(plotOutput("prelim_plot")))
              ), 
              fluidPage(
@@ -116,7 +130,16 @@ ui <- navbarPage(
                              "who",
                              "Competition Category",
                              c("men", "women", "college")
-                         )),
+                         ), 
+                         p("I hope you'll forgive the rather catchy question. 
+                           it's difficult to answer with the data, but according 
+                           to this, 100% of the teams accross categories who score 5
+                           points in the first end also wind up winning their game. 
+                           Interestingly, it appears that college curlers and women 
+                           olympians are less influenced by a lost of 1 or 2 in the first
+                           end, which might be a sign of more fluctuation in college games. 
+                           I am wary of these results, however, since they do not account for
+                           the 'strength' of any particular team.")),
                      mainPanel(plotOutput("chance_plot"))) 
              )),
     tabPanel("Importance of other ends",
@@ -131,7 +154,14 @@ ui <- navbarPage(
                              "Separated By",
                              c("Men/Women" = "competition", 
                                "Finals/Pool" = "team_group")
-                         )),
+                         ), 
+                         p("Here, I've mapped the shapes of games by looking
+                           at the proportion of points won in each end, of the 
+                           winners of each game. I basically wanted to know, 
+                           where are these winning teams winning the most points? 
+                           It appears to fluctuate wildly. Due to a limit of data 
+                           for college curling, the sample size of games was too small
+                           to be meaningful. ")),
                      mainPanel(imageOutput("gif", height = "100%")))
              ), 
              h3("Logistic regression"),
@@ -147,7 +177,17 @@ ui <- navbarPage(
                                "Olympic Men" = "olympic_men", 
                                "College" = "college"
                                )
-                         )),
+                         ), 
+                         p("I chose to do a logistic regression of multiple 
+                           variables, being the points scored in every end.
+                           These coefficients, divided by four, [TO BE LABELED] can be loosely interpreted 
+                           as chances of winning the game, given an increase of one 
+                           in any of the ends. You can choose to subset the data 
+                           and explore the differences in the regression coefficients. 
+                           Due to overfitting, I removed the final end from my analysis, 
+                           since there was not enough data on the 7th and 8th ends in Curling, 
+                           (the minimum number of ends to get a game to count for points is 6, 
+                           so teams often stop there), and the 8th end in the Olympics.")),
                      mainPanel(plotOutput("log_plot"))))))
     
 # Define server logic required to draw a histogram
