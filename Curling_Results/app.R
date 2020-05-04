@@ -14,6 +14,8 @@ library(gganimate)
 library(tidymodels)
 library(shinythemes)
 
+
+
 olympics<-readRDS("data/olympics.rds")
 college<- readRDS("data/college.rds")
 props<-readRDS("data/prop_winners.rds")
@@ -161,7 +163,11 @@ ui <- navbarPage(
                            where are these winning teams winning the most points? 
                            It appears to fluctuate wildly. Due to a limit of data 
                            for college curling, the sample size of games was too small
-                           to be meaningful. ")),
+                           to be meaningful. The horizontal line represents the null
+                           hypothesis, for each bar in each game, since
+                           we expect each of the ten ends to be equally important for winning 
+                           points. The variation far from this line is indeed a sign
+                           that the ends are not all equal among all games. ")),
                      mainPanel(imageOutput("gif", height = "100%")))
              ), 
              h3("Logistic regression"),
@@ -252,7 +258,9 @@ server <- function(input, output) {
             )
     })
     
-    # fade plot
+    # fade plot: This is the code for rendering the animated plot. However
+    # it takes too long to load. I'm putting it in, as a comment, for future 
+    # reference/just in case. However, I used GIFS that I had saved for this portion
     
     # output$fade_plot <- renderPlot({
     #     # Generate type based on input$plot_type from ui
@@ -294,10 +302,10 @@ server <- function(input, output) {
     output$gif <- renderImage({
         ifelse(input$gif_type == "competition", 
         
-                gif <- (list(src = "plot_comp.gif",
+                gif <- (list(src = "plot_comp1.gif",
                  contentType = 'image/gif')),
         
-                gif<- (list(src = "poolfinals.gif",
+                gif<- (list(src = "poolfinals1.gif",
                  contentType = 'image/gif')))
         gif
         

@@ -381,15 +381,37 @@ tidy_props %>%
   ) + 
   scale_x_discrete(labels = c(1:10)) +
   scale_fill_discrete(labels = c("Finals", "Pool"))+ 
+  geom_hline(aes(yintercept = .1)) + 
   transition_states(team_group,
                     transition_length = 2,
                      state_length = 1) + enter_fade() + exit_fade()
 
 ```
 
-    transition_states(team_group,
+```{r second animated plot}
+tidy_props %>% 
+  group_by(year, competition, prop) %>% 
+  summarize(points_prop = mean(value)) %>% 
+  ggplot(aes(prop, points_prop)) +
+  geom_bar(stat = "identity", aes(fill = competition))+
+  theme_classic()+
+  facet_wrap(vars(year))+
+  labs(
+    title = "Proportion of points scored by winners in Olympic Curling Games", 
+    subtitle = "The first end for men in 2018 showed remarkable importance", 
+    y = "Proportion of points", 
+    x = "end", 
+    fill = "Competition"
+  ) + 
+  scale_x_discrete(labels = c(1:10)) +
+  scale_fill_discrete(labels = c("Men", "Women"))+ 
+  geom_hline(aes(yintercept = .1)) + 
+  transition_states(competition,
                     transition_length = 2,
-                    state_length = 1) + enter_fade() + exit_fade() +
+                     state_length = 1) + enter_fade() + exit_fade()
+```
+
+
                     
 ```{r multivariate regression}
 clean_all_years_olympics <- all_years_olympics %>% 
