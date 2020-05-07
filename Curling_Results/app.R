@@ -143,7 +143,12 @@ ui <- navbarPage(
              p("My name is Lara Teich and I study Government with
              a secondary in East Asian Studies. I'm a junior at the college, 
              and I fell in love with curling in the fall of my freshman year.
-             You can reach me at larateich@college.harvard.edu."), 
+             You can reach me at larateich@college.harvard.edu. You can find the 
+             entirety of this project, as well as the cleaned datasets that I used, 
+             at my", 
+                a("Github Repository.", 
+                  href = "https://github.com/larateich/Curling-Project"),
+               ), 
              p("personal website: ", 
                a("larateich.art",
                  href = "https://larateich.art/"), 
