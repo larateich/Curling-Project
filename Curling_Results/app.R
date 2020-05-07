@@ -31,7 +31,7 @@ ui <- navbarPage(
     tabPanel("Overview",
              titlePanel("Curling: 'Chess on Ice'"),
              h3("Introduction to Curling"), 
-             p("In My project, I wanted to explore the differential importance
+             p("In my project, I wanted to explore the differential importance
                of different ends in a game of curling. Curling, like baseball, 
                is played in different rounds called 'ends', and strategy can 
                vary widely between different ends in the same game. A team that's
@@ -45,7 +45,10 @@ ui <- navbarPage(
                The sheer amount of velocity, or 'weight', that adult men can put
                behind a 44-pound curling stone, is just not accessible by 18-21 
                year-old college students. Women, though with notable exceptions 
-               like Racel Homan, who can throw with a ton of weight, are similar 
+               like", 
+               a("Rachel Homan",
+                 href = "https://www.youtube.com/watch?v=_4EVyv3_ch8"), 
+               ", who can throw with a ton of weight, are similar 
                to college students in that their stones are typically 'lighter'."), 
              p("Therefore, I hypothesize that though still different, college 
                curling data will more closely resemble women curlers than men in
@@ -62,7 +65,48 @@ ui <- navbarPage(
                My results in answering these questions are sadly not significant, because 
                the differences in effect are too minute. However, given the volume of data
                used, these differences may serve as a guide for future curling analytics work, 
-               and serve as an initial hypothesis.")
+               and serve as an initial hypothesis."), 
+             h3("Preliminary Results"), 
+             h4("Percent of the time that the first end winner won the game"), 
+             fluidPage(
+                 sidebarLayout(
+                     sidebarPanel(
+                         selectInput(
+                             "group_of_curlers",
+                             "Curling Level",
+                             c("Olympic" = "olympics", 
+                               "College" = "college")
+                         ), 
+                         selectInput(
+                             "specification",
+                             "Separated By",
+                             c("Men/Women (olympics only)" = "competition", 
+                               "Finals/Pool" = "team_group", 
+                               "Year" = "year")
+                         ),
+                     ),
+                     mainPanel(plotOutput("percentage_plot")), 
+                     ), 
+                 p("This showed me that winning the first end is incredibly 
+                       important, regardless of how the teams are stratified--the
+                       team who wins the first end is simply more likely to win the
+                       game.")
+                 ), 
+             h4("Time for some regressions!"), 
+             fluidPage(
+                 sidebarLayout(
+                     sidebarPanel(
+                         selectInput(
+                             "group_of_curlers",
+                             "Curling Level",
+                             c("Olympic" = "olympics", 
+                               "College" = "college")
+                         ), 
+                     ),
+                     mainPanel(plotOutput("linreg_plot")), 
+                 ), 
+                 p("Commentary time.")
+                     )
             ),
     tabPanel("About", 
              titlePanel("About"),
@@ -100,10 +144,22 @@ ui <- navbarPage(
              a secondary in East Asian Studies. I'm a junior at the college, 
              and I fell in love with curling in the fall of my freshman year.
              You can reach me at larateich@college.harvard.edu."), 
-             p("personal website: larateich.art"), 
-             p("linkedIn : https://www.linkedin.com/in/lara-teich-76ba61172/"),
-             p("Other sites: Instagram: @loose_leaf_lichen"),
-             p("Scholar: https://scholar.harvard.edu/larateich")),
+             p("personal website: ", 
+               a("larateich.art",
+                 href = "https://larateich.art/"), 
+               ), 
+             p("linkedIn :", 
+                 a("linkedin.com/in/lara-teich",
+                     href = "https://www.linkedin.com/in/lara-teich-76ba61172/"), 
+                ),
+             p("Art Instagram: ", 
+               a("@loose_leaf_lichen",
+                 href = "https://www.instagram.com/loose_leaf_lichen/"),
+               ),
+             p("Scholar:", 
+                 a("scholar.harvard.edu/larateich", 
+                     href = "https://scholar.harvard.edu/larateich"), 
+             )),
              column(2,
                     imageOutput("curlinglara", height = "100%"),
                     imageOutput("lara", height = "100%"))),
@@ -186,18 +242,81 @@ ui <- navbarPage(
                          ), 
                          p("I chose to do a logistic regression of multiple 
                            variables, being the points scored in every end.
-                           These coefficients, divided by four, [TO BE LABELED] can be loosely interpreted 
+                           These coefficients, divided by four (labelled in white) can be loosely interpreted 
                            as chances of winning the game, given an increase of one 
                            in any of the ends. You can choose to subset the data 
                            and explore the differences in the regression coefficients. 
-                           Due to overfitting, I removed the final end from my analysis, 
-                           since there was not enough data on the 7th and 8th ends in Curling, 
-                           (the minimum number of ends to get a game to count for points is 6, 
-                           so teams often stop there), and the 8th end in the Olympics.")),
+                           Due to overfitting, I removed the final ends (9 and 10) from my analysis
+                           of olympic curling, since many games do conclude after the
+                           8th end. Similarly, in college curling I ommitted the 
+                           8th end because most games conclude after 6 or 7 ends, 
+                           something that I had noticed while imputting the data. Here
+                           you can see, for example, that every point scored in the 
+                           first end in college curling games increases the chance of winning
+                           by 37 %. That's a big effect!")),
                      mainPanel(plotOutput("log_plot"))))))
     
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+    
+    # Plot on Overview Page of Percentages
+    output$percentage_plot <- renderPlot({
+        # Generate type based on input$plot_type from ui
+        ifelse(
+            input$group_of_curlers == "college", 
+            x<- college, 
+            x<- olympics
+        )
+        
+        ifelse(
+            input$specification == "competition",
+            
+            
+            x   <- x %>% 
+                group_by(competition, ind_first_end_winner) %>% 
+                summarise(pct = mean(ind_game_winner)),
+            
+            ifelse(
+                input$specification == "year", 
+                x<- x %>% 
+                    group_by(year, ind_first_end_winner) %>% 
+                    summarise(pct = mean(ind_game_winner)), 
+                x <- x %>% 
+                    group_by(team_group, ind_first_end_winner) %>% 
+                    summarise(pct = mean(ind_game_winner))
+            ))
+        
+        ifelse(
+            input$specification == "competition",
+            
+            y <- x$competition,
+            
+            ifelse(
+                input$specification == "year", 
+                y <- x$year, 
+                y <- x$team_group
+            )
+            
+                )
+        
+    
+        
+        ggplot(x, aes(y, pct, fill = ind_first_end_winner))+
+            geom_col(position = "dodge") +
+            theme_classic()+
+            labs(
+                title = "Percent of the time a team given a win or a loss in the first end", 
+                subtitle = "Across the spectrum of year, gender, and curling ability, \nteams who win the first end often win the game", 
+                y = "Percentage", 
+                x = input$specification, 
+                fill = "First end result"
+            ) +
+            scale_fill_discrete(labels = c("Lost", "Won")) +
+            geom_text(aes(label = round(pct * 100, 1), y = pct + 0.025), 
+                      color = "black", position = position_dodge(width = 1) 
+                      )
+    })
+    
 
     # Plots on men/women vs finals/pool
     
@@ -345,13 +464,13 @@ server <- function(input, output) {
                                    factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7,
                                    data = filt_college) %>% 
                                        tidy(conf.int = TRUE) %>%
-                                       slice(2:7),
+                                       slice(2:8),
                
                tibble_logistic_fit <- fit(logistic_mod, 
                                    factor(win) ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8, 
                                    data = filt_olympics)%>% 
                                        tidy(conf.int = TRUE) %>%
-                                       slice(2:8)
+                                       slice(2:9)
                )
         
         ggplot(tibble_logistic_fit, aes(term, estimate)) + 
@@ -365,7 +484,8 @@ server <- function(input, output) {
                 y = "Logistic Regression Coefficient"
             )  + 
             scale_x_discrete(labels = c(1:10)) + 
-            theme_classic() + ylim (0, 2.6)
+            theme_classic() + ylim (0, 2.6) + 
+            geom_text(aes(label = round(estimate / 4, 3)), color = "white", vjust = 1)
     })
     # Curling Photo
     

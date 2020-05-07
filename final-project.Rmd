@@ -443,7 +443,8 @@ ggplot(tibble_logistic_fit, aes(term, estimate)) +
     x = "end number", 
     y = "Logistic Regression Coefficient"
   )  + 
-  scale_x_discrete(labels = ends)
+  scale_x_discrete(labels = ends) + 
+  geom_text(aes(label = round(estimate / 4, 3)), color = "white", vjust = 1)
 
 ```
 
@@ -546,4 +547,13 @@ ggplot(clean_all_college, aes(x1, win)) + geom_point(position = "jitter") + them
 
 
 ```
+
+```{r percent scores first wins?}
+all_years_olympics %>% 
+  group_by(competition, ind_first_end_winner) %>% 
+  summarise(pct = mean(ind_game_winner)) %>% 
+  ggplot(aes(competition, pct, fill = ind_first_end_winner))+geom_col(position = "dodge")
+
+```
+
 
