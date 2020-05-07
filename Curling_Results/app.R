@@ -92,7 +92,7 @@ ui <- navbarPage(
                        team who wins the first end is simply more likely to win the
                        game.")
                  ), 
-             h4("Time for some regressions!"), 
+             h4("Number of Points in the First End and Winning the Game"), 
              fluidPage(
                  sidebarLayout(
                      sidebarPanel(
