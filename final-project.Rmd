@@ -295,6 +295,7 @@ all_years_olympics<- all_years_olympics %>%
   mutate(first_end_first_game = ifelse(game_winner == first_end_winner, T, F))
 ```
 ```{r making a plot on first end in olympics}
+# this was one of the first plots I made to see what proportion of games were won in the first end, after I had done all my data cleaning of the olympic data. 
 proportion_olympics_quick <- all_years_olympics %>% 
   group_by(year,team_group) %>% 
   summarize(prop_double_win = mean(first_end_first_game, na.rm = T))
@@ -330,6 +331,10 @@ ggplot(proportion_olympics_quick, aes(year, prop_double_win, fill = competition,
 ```
 
 ```{r new analysis}
+
+# Here, I wanted to see if I could look at the average proportion of points, per
+# year, for the olympic curlers, that was won in the first end of the game. I
+# later decide to expand this to be inclusive of all ends.
 all_years_olympics %>% 
   filter(ind_game_winner == T) %>%  
   group_by(year, competition) %>% 
@@ -338,6 +343,12 @@ all_years_olympics %>%
 ```
 
 ```{r proportion of wins} 
+
+# I spent a while trying to figure out how to automate the calculation of
+# proportions, but I eventually decided I would calculate a column for each one
+# and then pivote the data to be longer, so that there would be one column
+# with the number of the end and one column for the proportion. 
+
 tidy_props<- all_years_olympics %>% 
   select(id,competition, team_group, year, country, ind_game_winner, starts_with("x"), end_score, -x, -x_2) %>% 
   mutate(
@@ -358,12 +369,16 @@ tidy_props<- all_years_olympics %>%
   ) 
 tidy_props$value <- replace_na(tidy_props$value, 0)
 
+# I only cared about where the winners had scored their points. Did earlier ends
+# matter more than later ones?
+
 tidy_props <- tidy_props %>% 
   filter(ind_game_winner == T)
 
-#ggplot(tidy_props, aes(prop, value)) + geom_col(position = "dodge") +
-  #facet_wrap(vars(competition))
+#Then I faceted this data by year! and saved it as a gif
 ends<-c(1:10)
+
+# This plot was separated by whether the team was a finals team or a pools team. 
 
 tidy_props %>% 
   group_by(year, team_group, prop) %>% 
@@ -389,6 +404,8 @@ tidy_props %>%
 ```
 
 ```{r second animated plot}
+# This plot was identical to above except it separated men from women. 
+
 tidy_props %>% 
   group_by(year, competition, prop) %>% 
   summarize(points_prop = mean(value)) %>% 
@@ -414,12 +431,18 @@ tidy_props %>%
 
                     
 ```{r multivariate regression}
+# making a logistic regression on clean subset of the olympics data. 
 clean_all_years_olympics <- all_years_olympics %>% 
   mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
   select(id, year, competition, team_group, country, win, starts_with("x"), -x, -x_2, -x10, -x9)
 
+# setting the engine, building the 'black box'
+
 logistic_mod <- logistic_reg() %>%
   set_engine("glm") 
+
+# making the model for the olympics. I repeat this step for college later in the
+# app
 
 logistic_fit <- fit(logistic_mod,
 
@@ -428,6 +451,10 @@ logistic_fit <- fit(logistic_mod,
                     data = clean_all_years_olympics)
 
 logistic_fit
+
+# I slice the first row off of the tibble because I don't really care about the
+# intercept (it's not a meaningful measurement--chance of winning if you score 0
+# points in the 0th end--so if you don't play at all? idk)
 
 tibble_logistic_fit <- logistic_fit %>%
   tidy(conf.int = TRUE) %>%
@@ -449,8 +476,13 @@ ggplot(tibble_logistic_fit, aes(term, estimate)) +
 ```
 
 ```{r collect college}
+# instead of scraping the mess that is the softpeelr website, I spent an
+# afternoon typing in the data by hand in the format I wanted it.
 college_yale_spiel <- read_excel("~/gov1005/college_yale_spiel.xlsx", 
  na = "NA")
+
+# I mutated it the same way I had mutated the olympics data. 
+
 college_yale_spiel <- 
   college_yale_spiel %>% 
       group_by(year, id) %>% 
@@ -477,6 +509,7 @@ olympic_men_chance<-all_years_olympics %>%
   summarize(chance = mean(ind_game_winner)) %>% pull(chance)
 ```
 ```{r chance_everyone}
+# I tried to put everyone together, but the data was a bit messy. 
 chance_everyone <- tibble(
   score = 0:5, 
   pr_men = c(olympic_men_chance, 1), 
@@ -489,6 +522,7 @@ chance_everyone <- tibble(
     names_prefix = "pr_")
 ``` 
 ```{r plot}
+# this failed to work. 
 ggplot(chance_everyone, aes(score, value, fill = category)) +
   geom_col() + 
   theme_classic() +
@@ -500,6 +534,7 @@ ggplot(chance_everyone, aes(score, value, fill = category)) +
 
 ```
 ```{r}
+# repeating the logistic analysis for the college game.
 clean_all_college<- college_yale_spiel %>% 
             mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
             select(id, year, competition, team_group, school, win, 
@@ -529,6 +564,9 @@ ggplot(college_tibble_logistic_fit, aes(term, estimate)) +
   scale_x_discrete(labels = ends)
 ```
 ```{r}
+
+# here I experimented with a linear model, which was somewhat meaningful. I
+# decide to include this in my overview
 clean_all_college<- college_yale_spiel %>% 
             mutate(win = ifelse(ind_game_winner == T, 1, 0)) %>% 
             select(id, year, competition, team_group, school, win, 

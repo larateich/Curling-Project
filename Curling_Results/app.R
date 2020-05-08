@@ -20,6 +20,8 @@ olympics<-readRDS("data/olympics.rds")
 college<- readRDS("data/college.rds")
 props<-readRDS("data/prop_winners.rds")
 tidy_props<- readRDS("data/tidy_props.rds")
+clean_all_college<- college %>% 
+    mutate(win = ifelse(ind_game_winner == T, 1, 0))
 
 logistic_mod <- logistic_reg() %>%
     set_engine("glm") 
@@ -99,8 +101,14 @@ ui <- navbarPage(
                          selectInput(
                              "country",
                              "Olympic Country",
-                             olympics$country
+                             c("all", olympics$country)
                          ), 
+                         p("Here you can select a country, or if you 
+                           want to look at the entirety of the olympic data, you
+                           can select 'all'. 
+                           I found it interesting that some countries had 
+                           stronger positive relations between first end and winning than
+                           others"), 
                      ),
                      mainPanel(plotOutput("linreg_olympic"), 
                                plotOutput("linreg_college")), 
@@ -322,7 +330,46 @@ server <- function(input, output) {
                       )
     })
     
-
+    output$linreg_college <- renderPlot({
+        # Generate type based on input$plot_type from ui
+        
+        ggplot(clean_all_college, aes(x1, win)) + 
+            geom_point(position = "jitter") + 
+            theme_classic() + 
+            geom_smooth(method = "lm", se = F) + 
+            ylim(0, 1.5) + xlim(0, 5)+ 
+            labs(
+                title = "Relationship between score in the First End and Chance of winning the game", 
+                subtitle  = "In College Curling", 
+                x = "Score in the First End", 
+                y = "Chance of Winning"
+            )
+        
+    })
+    
+    output$linreg_olympic<- renderPlot({
+        ifelse(
+            input$country == "all", 
+            olympic_linreg_data<- olympics %>% 
+                mutate(win = ifelse(ind_game_winner == T, 1, 0)), 
+            olympic_linreg_data<- olympics %>% 
+                filter(country== input$country) %>%
+                mutate(win = ifelse(ind_game_winner == T, 1, 0))
+        )
+        
+        ggplot(olympic_linreg_data, aes(x1, win)) + 
+            geom_point(position = "jitter") +
+            geom_smooth(method = "lm", se = F) + 
+            theme_classic() +
+            ylim(0, 1.5) + xlim(0, 5) + 
+            labs(
+                title = "Relationship between score in the First End and Chance of winning the game", 
+                subtitle  = paste("in the Olympics for", input$country), 
+                x = "Score in the First End", 
+                y = "Chance of Winning"
+            )
+    })
+    
     # Plots on men/women vs finals/pool
     
     output$prelim_plot <- renderPlot({
