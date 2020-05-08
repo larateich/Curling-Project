@@ -15,16 +15,34 @@ library(tidymodels)
 library(shinythemes)
 
 
-
+# data
 olympics<-readRDS("data/olympics.rds")
 college<- readRDS("data/college.rds")
 props<-readRDS("data/prop_winners.rds")
 tidy_props<- readRDS("data/tidy_props.rds")
+
 clean_all_college<- college %>% 
     mutate(win = ifelse(ind_game_winner == T, 1, 0))
 
+# models
 logistic_mod <- logistic_reg() %>%
     set_engine("glm") 
+
+# function for returning a line equation and r squared as a string
+# SOURCE: https://groups.google.com/forum/#!topic/ggplot2/1TgH-kG5XMA
+
+lm_eqn <- function(df){
+    m <- lm(x1 ~ win, df);
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+                     list(a = format(unname(coef(m)[1]), digits = 2),
+                          b = format(unname(coef(m)[2]), digits = 2),
+                          r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));
+}
+
+
+
+
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
@@ -108,12 +126,20 @@ ui <- navbarPage(
                            can select 'all'. 
                            I found it interesting that some countries had 
                            stronger positive relations between first end and winning than
-                           others"), 
+                           others."), 
+                         p("As you can see from the R-squared, though, this 
+                           positive line is deceiving. This is not super significant, 
+                           unfortuneately, but that's okay! half of research is getting
+                           bad results and adjusting. These are merely my preliminary 
+                           results. Hence, I became more interested in other ends, 
+                           as well!"), 
                      ),
                      mainPanel(plotOutput("linreg_olympic"), 
                                plotOutput("linreg_college")), 
                  ), 
-                 p("Commentary time.")
+                 p("Generally, I noticed a positive relationship between winning more points
+                   in the first end and winning the game. This makes sense, but it was interesting
+                   to see that it didn't differ by a huge amount in college and olympic games. ")
                      )
             ),
     tabPanel("About", 
@@ -343,7 +369,11 @@ server <- function(input, output) {
                 subtitle  = "In College Curling", 
                 x = "Score in the First End", 
                 y = "Chance of Winning"
-            )
+            ) + 
+            geom_text(x = 3, y = .4, label = lm_eqn(clean_all_college), 
+                      parse = TRUE, 
+                      color = "blue")
+        
         
     })
     
@@ -367,7 +397,10 @@ server <- function(input, output) {
                 subtitle  = paste("in the Olympics for", input$country), 
                 x = "Score in the First End", 
                 y = "Chance of Winning"
-            )
+            ) + 
+            geom_text(x = 3, y = .4, label = lm_eqn(olympic_linreg_data), 
+                      parse = TRUE, 
+                      color = "blue")
     })
     
     # Plots on men/women vs finals/pool

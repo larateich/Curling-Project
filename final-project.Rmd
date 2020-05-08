@@ -581,7 +581,18 @@ college_end1_logistic_fit <- fit(logistic_mod,
 college_tibble_logistic_fit <- college_end1_logistic_fit %>%
   tidy(conf.int = TRUE)
 
-ggplot(clean_all_college, aes(x1, win)) + geom_point(position = "jitter") + theme_classic() + geom_smooth(method = "lm", se = F)
+lm_eqn <- function(df){
+    m <- lm(x1 ~ win, df);
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2, 
+         list(a = format(unname(coef(m)[1]), digits = 2),
+              b = format(unname(coef(m)[2]), digits = 2),
+             r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));
+}
+
+
+ggplot(clean_all_college, aes(x1, win)) + geom_point(position = "jitter") + theme_classic() + geom_smooth(method = "lm", se = F) + 
+  geom_text(x = 3, y = .4, label = lm_eqn(clean_all_college), parse = TRUE)
 
 
 ```
