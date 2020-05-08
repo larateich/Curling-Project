@@ -19,7 +19,7 @@ library(shinythemes)
 olympics<-readRDS("data/olympics.rds")
 college<- readRDS("data/college.rds")
 props<-readRDS("data/prop_winners.rds")
-tidy_props<- readRDS("tidy_props.rds")
+tidy_props<- readRDS("data/tidy_props.rds")
 
 logistic_mod <- logistic_reg() %>%
     set_engine("glm") 
@@ -97,13 +97,13 @@ ui <- navbarPage(
                  sidebarLayout(
                      sidebarPanel(
                          selectInput(
-                             "group_of_curlers",
-                             "Curling Level",
-                             c("Olympic" = "olympics", 
-                               "College" = "college")
+                             "country",
+                             "Olympic Country",
+                             olympics$country
                          ), 
                      ),
-                     mainPanel(plotOutput("linreg_plot")), 
+                     mainPanel(plotOutput("linreg_olympic"), 
+                               plotOutput("linreg_college")), 
                  ), 
                  p("Commentary time.")
                      )
